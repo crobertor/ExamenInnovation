@@ -26,7 +26,7 @@
     public Guid GoalId { get; set; }
 
     [Parameter]
-    public Models.Task Task { get; set; }
+    public Models.Task? Task { get; set; }
 
     private Models.Task model = new Models.Task();
 
@@ -34,11 +34,10 @@
     {
         try
         {
-            Console.WriteLine("IDSALIDA", GoalId);
-
-            model.Id = Guid.Empty;
             if(Task != null)
+            {
                 model = Task;
+            }
         }
         catch(Exception ex)
         {
@@ -50,10 +49,11 @@
     {
         try
         {
-            Console.WriteLine("IDSALIDA",model.Id);
+            Console.WriteLine("EL modelo", model);
 
             if(model.Id == Guid.Empty)
             {
+                model.Status = "Incompleted";
                 model.GoalId = GoalId;
                 await TaskService.AddTask(model);
             }

@@ -35,7 +35,7 @@
                             </RadzenText>
                         </RadzenStack>
 
-                        @* <RadzenProgressBar ProgressBarStyle="ProgressBarStyle.Secondary" ShowValue="false" Min="0" Max="goal.Tasks.Count()" Mode="ProgressBarMode.Determinate" Value="GetValue(goal)"></RadzenProgressBar> *@
+                        <RadzenProgressBar ProgressBarStyle="ProgressBarStyle.Secondary" ShowValue="false" Min="0" Max="goal.Tasks.Count()" Mode="ProgressBarMode.Determinate" Value="GetValue(goal)"></RadzenProgressBar>
 
                     </RadzenStack>
 
@@ -45,7 +45,7 @@
         </RadzenStack>
     </RadzenColumn>
     <RadzenColumn Size="9">
-        <PlanCompensascionComponent tasks="Tasks" GoalId="SelectedGoal"></PlanCompensascionComponent>
+        <PlanCompensascionComponent tasks="Tasks" GoalId="SelectedGoal" OnChangeEvent="UpdateDataChanged"></PlanCompensascionComponent>
     </RadzenColumn>
 </RadzenRow>
 
@@ -55,6 +55,27 @@
     List<Goal> goals = new List<Goal>();
     List<Models.Task> Tasks = new List<Models.Task>();
     private Guid SelectedGoal = Guid.Empty;
+
+    protected void UpdateDataChanged(bool changed)
+    {
+        try
+        {
+
+            Update();
+
+        }
+        catch(Exception ex)
+        {
+            NotificacionService.Notify(NotificationSeverity.Error, ex.Message, "Error");
+
+        }
+    }
+
+    private async void Update()
+    {
+        goals = await GoalService.GetAll();
+        StateHasChanged();
+    }
 
     private double GetValue(Goal goal)
     {

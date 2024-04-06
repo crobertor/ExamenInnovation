@@ -14,10 +14,10 @@
     </EmptyTemplate>
     <HeaderTemplate>
         <RadzenStack Orientation="Orientation.Horizontal">
-            <RadzenButton Text="Nueva Tarea" Click="AddNewTask"></RadzenButton>
-            <RadzenButton Click="CompleteTask" Text="Completar Tarea"></RadzenButton>
-            <RadzenButton Text="Editar Tarea" Click="EditTask"></RadzenButton>
-            <RadzenButton Click="DeleteAllTask" Text="Eliminar"></RadzenButton>
+            <RadzenButton Disabled="GoalId == Guid.Empty" Text="Nueva Tarea" Click="AddNewTask"></RadzenButton>
+            <RadzenButton Disabled="GoalId == Guid.Empty" Click="CompleteTask" Text="Completar Tarea"></RadzenButton>
+            <RadzenButton Disabled="GoalId == Guid.Empty" Text="Editar Tarea" Click="EditTask"></RadzenButton>
+            <RadzenButton Disabled="GoalId == Guid.Empty" Click="DeleteAllTask" Text="Eliminar"></RadzenButton>
         </RadzenStack>
     </HeaderTemplate>
     <Columns>
@@ -48,6 +48,9 @@
     [Parameter, EditorRequired]
     public List<Models.Task> tasks { get; set; }
 
+    [Parameter]
+    public EventCallback<bool> OnChangeEvent { get; set; }
+
 
     bool allowRowSelectOnRowClick = true;
 
@@ -58,12 +61,15 @@
     {
         try
         {
+            if (selectedTask.Count <= 0 || selectedTask == null) return;
+
             SpinnerService.Show();
             await TaskService.CompleteTask(selectedTask.Select(d => d.Id).ToList());
 
             selectedTask.Clear();
 
             tasks = await TaskService.GetAllTask(GoalId);
+
         }
         catch (Exception ex)
         {
@@ -74,6 +80,9 @@
         finally
         {
             SpinnerService.Hide();
+            StateHasChanged();
+            await OnChangeEvent.InvokeAsync(true);
+
         }
     }
 
@@ -81,10 +90,14 @@
     {
         try
         {
+
+
             var confirm = await DialogService.Confirm("¿Está seguro de eliminar los elementos seleccionados?", "Eliminar tareas");
 
             if (confirm.HasValue)
                 if (confirm.Value == false) return;
+
+            if (selectedTask.Count <= 0 && selectedTask == null) return;
 
             SpinnerService.Show();
 
@@ -107,6 +120,8 @@
             SpinnerService.Hide();
 
             StateHasChanged();
+            await OnChangeEvent.InvokeAsync(true);
+
         }
     }
 
@@ -114,6 +129,9 @@
     {
         try
         {
+            if (selectedTask.Count <= 0 || selectedTask == null) return;
+
+
             if (selectedTask.Any())
             {
 
@@ -153,19 +171,31 @@
             Console.WriteLine("GoalId", GoalId);
             var result = await DialogService.OpenAsync<AddTaskComponent>("Tarea", new Dictionary<string, object>()
         {
-            {
+             {
                 "GoalId",GoalId
+            },
+            {
+                "Task",null
             }
         });
 
             if (result == true)
             {
                 tasks = await TaskService.GetAllTask(GoalId);
+                await OnChangeEvent.InvokeAsync(true);
+                await InvokeAsync(StateHasChanged);
+                grid.RefreshDataAsync();
             }
         }
         catch (Exception ex)
         {
             NotificationService.Notify(NotificationSeverity.Error, ex.Message, "Error");
+        }
+        finally
+        {
+
+            StateHasChanged();
+
         }
 
     }
