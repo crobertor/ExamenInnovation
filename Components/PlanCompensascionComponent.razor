@@ -14,10 +14,10 @@
     </EmptyTemplate>
     <HeaderTemplate>
         <RadzenStack Orientation="Orientation.Horizontal">
-            <RadzenButton Disabled="GoalId == Guid.Empty" Text="Nueva Tarea" Click="AddNewTask"></RadzenButton>
-            <RadzenButton Disabled="GoalId == Guid.Empty" Click="CompleteTask" Text="Completar Tarea"></RadzenButton>
-            <RadzenButton Disabled="GoalId == Guid.Empty" Text="Editar Tarea" Click="EditTask"></RadzenButton>
-            <RadzenButton Disabled="GoalId == Guid.Empty" Click="DeleteAllTask" Text="Eliminar"></RadzenButton>
+            <RadzenButton Icon="add" Disabled="GoalId == Guid.Empty" Text="Nueva Tarea" Click="AddNewTask"></RadzenButton>
+            <RadzenButton Icon="done" Disabled="GoalId == Guid.Empty" Click="CompleteTask" Text="Completar Tarea"></RadzenButton>
+            <RadzenButton Icon="edit" Disabled="GoalId == Guid.Empty" Text="Editar Tarea" Click="EditTask"></RadzenButton>
+            <RadzenButton Icon="delete" Disabled="GoalId == Guid.Empty" Click="DeleteAllTask" Text="Eliminar"></RadzenButton>
         </RadzenStack>
     </HeaderTemplate>
     <Columns>
@@ -32,7 +32,15 @@
                                 TValue="bool" Change=@(args => { if(!allowRowSelectOnRowClick) { grid.SelectRow(data); }}) />
             </Template>
         </RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="Models.Task" Property="Priority" Filterable="false"></RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="Models.Task" Width="10%" Property="Priority"  Filterable="false">
+            <Template Context="data">
+                @if(data.Priority == false)
+                {
+                    <RadzenIcon Icon="star"></RadzenIcon>
+
+                }
+            </Template>
+        </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="Models.Task" Property="Name" Title="Tarea"></RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="Models.Task" Property="Date" Title="Fecha"></RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="Models.Task" Property="Status" Title="Estatus">
@@ -68,8 +76,10 @@
 
             selectedTask.Clear();
 
+            await OnChangeEvent.InvokeAsync(true);
             tasks = await TaskService.GetAllTask(GoalId);
-
+            InvokeAsync(StateHasChanged);
+            await System.Threading.Tasks.Task.Delay(1);
         }
         catch (Exception ex)
         {
@@ -80,8 +90,7 @@
         finally
         {
             SpinnerService.Hide();
-            StateHasChanged();
-            await OnChangeEvent.InvokeAsync(true);
+            
 
         }
     }
@@ -105,7 +114,10 @@
 
             selectedTask.Clear();
 
+            await OnChangeEvent.InvokeAsync(true);
             tasks = await TaskService.GetAllTask(GoalId);
+            InvokeAsync(StateHasChanged);
+            await System.Threading.Tasks.Task.Delay(1);
 
         }
         catch (Exception ex)
@@ -118,9 +130,6 @@
         finally
         {
             SpinnerService.Hide();
-
-            StateHasChanged();
-            await OnChangeEvent.InvokeAsync(true);
 
         }
     }
@@ -181,10 +190,10 @@
 
             if (result == true)
             {
-                tasks = await TaskService.GetAllTask(GoalId);
                 await OnChangeEvent.InvokeAsync(true);
-                await InvokeAsync(StateHasChanged);
-                grid.RefreshDataAsync();
+                tasks = await TaskService.GetAllTask(GoalId);
+                InvokeAsync(StateHasChanged);
+                await System.Threading.Tasks.Task.Delay(1);
             }
         }
         catch (Exception ex)
@@ -194,7 +203,7 @@
         finally
         {
 
-            StateHasChanged();
+           
 
         }
 
