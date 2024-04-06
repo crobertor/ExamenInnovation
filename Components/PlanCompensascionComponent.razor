@@ -1,0 +1,172 @@
+﻿@using ExamenInnovation.Pages
+@inject DialogService DialogService;
+@inject NotificationService NotificationService;
+@inject SpinnerService SpinnerService;
+@inject ITaskService TaskService;
+
+<h3>Configuar Plan de Compensación</h3>
+
+<RadzenDataGrid @ref="grid" @bind-Value="selectedTask" AllowRowSelectOnRowClick=allowRowSelectOnRowClick SelectionMode="DataGridSelectionMode.Multiple" Data="tasks" LogicalFilterOperator="LogicalFilterOperator.And" AllowFiltering="true" FilterMode="FilterMode.Simple" AllowPaging="true" PageSize="5" TItem="Models.Task">
+    <EmptyTemplate>
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" AlignItems="AlignItems.Center">
+            <RadzenText TextStyle="TextStyle.Body2" Text="No hay información a mostrar"></RadzenText>
+        </RadzenStack>
+    </EmptyTemplate>
+    <HeaderTemplate>
+        <RadzenStack Orientation="Orientation.Horizontal">
+            <RadzenButton Text="Nueva Tarea" Click="AddNewTask"></RadzenButton>
+            <RadzenButton Click="CompleteTask" Text="Completar Tarea"></RadzenButton>
+            <RadzenButton Text="Editar Tarea" Click="EditTask"></RadzenButton>
+            <RadzenButton Click="DeleteAllTask" Text="Eliminar"></RadzenButton>
+        </RadzenStack>
+    </HeaderTemplate>
+    <Columns>
+        <RadzenDataGridColumn TItem="Models.Task" Width="60px" Sortable="false" Filterable="false">
+            <HeaderTemplate>
+                <RadzenCheckBox TabIndex="-1" TriState="false" TValue="bool?" InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Select all items" }})"
+                                Value="@(selectedTask == null || selectedTask?.Any() != true ? false : !tasks.All(i => selectedTask.Contains(i)) ? null : tasks.Any(i => selectedTask.Contains(i)))"
+                                Change="@(args => selectedTask = args == true ? tasks.ToList() : null)" />
+            </HeaderTemplate>
+            <Template Context="data">
+                <RadzenCheckBox TabIndex="-1" TriState="false" Value="@(selectedTask != null && selectedTask.Contains(data))" InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Select item" }})"
+                                TValue="bool" Change=@(args => { if(!allowRowSelectOnRowClick) { grid.SelectRow(data); }}) />
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="Models.Task" Property="Priority" Filterable="false"></RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="Models.Task" Property="Name" Title="Tarea"></RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="Models.Task" Property="Date" Title="Fecha"></RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="Models.Task" Property="Status" Title="Estatus">
+        </RadzenDataGridColumn>
+
+    </Columns>
+</RadzenDataGrid>
+
+@code {
+    [Parameter, EditorRequired]
+    public Guid GoalId { get; set; }
+
+    [Parameter, EditorRequired]
+    public List<Models.Task> tasks { get; set; }
+
+
+    bool allowRowSelectOnRowClick = true;
+
+    IList<Models.Task> selectedTask;
+    RadzenDataGrid<Models.Task> grid;
+
+    public async System.Threading.Tasks.Task CompleteTask()
+    {
+        try
+        {
+            SpinnerService.Show();
+            await TaskService.CompleteTask(selectedTask.Select(d => d.Id).ToList());
+
+            selectedTask.Clear();
+
+            tasks = await TaskService.GetAllTask(GoalId);
+        }
+        catch (Exception ex)
+        {
+            SpinnerService.Hide();
+            NotificationService.Notify(NotificationSeverity.Error, ex.Message, "Error");
+
+        }
+        finally
+        {
+            SpinnerService.Hide();
+        }
+    }
+
+    public async System.Threading.Tasks.Task DeleteAllTask()
+    {
+        try
+        {
+            var confirm = await DialogService.Confirm("¿Está seguro de eliminar los elementos seleccionados?", "Eliminar tareas");
+
+            if (confirm.HasValue)
+                if (confirm.Value == false) return;
+
+            SpinnerService.Show();
+
+            await TaskService.DeleteAllTask(selectedTask.Select(d => d.Id).ToList());
+
+            selectedTask.Clear();
+
+            tasks = await TaskService.GetAllTask(GoalId);
+
+        }
+        catch (Exception ex)
+        {
+            SpinnerService.Hide();
+
+            NotificationService.Notify(NotificationSeverity.Error, ex.Message, "Error");
+
+        }
+        finally
+        {
+            SpinnerService.Hide();
+
+            StateHasChanged();
+        }
+    }
+
+    public async System.Threading.Tasks.Task EditTask()
+    {
+        try
+        {
+            if (selectedTask.Any())
+            {
+
+                var result = await DialogService.OpenAsync<AddTaskComponent>("Tarea", new Dictionary<string, object>()
+        {
+            {
+                "GoalId",GoalId
+            },
+            {
+                "Task",selectedTask.FirstOrDefault()!
+            }
+        });
+
+                if (result == true)
+                {
+                    selectedTask.Clear();
+                    tasks = await TaskService.GetAllTask(GoalId);
+                }
+            }
+            else
+            {
+
+            }
+
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, ex.Message, "Error");
+        }
+
+    }
+
+    public async System.Threading.Tasks.Task AddNewTask()
+    {
+        try
+        {
+            Console.WriteLine("GoalId", GoalId);
+            var result = await DialogService.OpenAsync<AddTaskComponent>("Tarea", new Dictionary<string, object>()
+        {
+            {
+                "GoalId",GoalId
+            }
+        });
+
+            if (result == true)
+            {
+                tasks = await TaskService.GetAllTask(GoalId);
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, ex.Message, "Error");
+        }
+
+    }
+}

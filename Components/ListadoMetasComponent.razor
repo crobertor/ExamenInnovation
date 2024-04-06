@@ -1,0 +1,163 @@
+﻿@using ExamenInnovation.Pages
+@inject DialogService DialogService;
+@inject NotificationService NotificacionService;
+@inject SpinnerService SpinnerService;
+@inject IGloalService GoalService;
+@inject ITaskService TaskService;
+
+<RadzenRow>
+    <RadzenColumn Size="3">
+        <RadzenStack Orientation="Orientation.Vertical" AlignItems="AlignItems.Start" class="mb-3">
+            <RadzenButton Text="Nueva Meta" Click="(()=>AddNewGoal(null))"></RadzenButton>
+        </RadzenStack>
+        <RadzenStack Orientation="Orientation.Vertical">
+            <RadzenCard>
+                @foreach (var goal in goals)
+                {
+                    <RadzenStack class="mb-3" Orientation="Orientation.Vertical">
+                        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
+                            <RadzenButton Click="(()=>GetTaskByGoalId(goal.Id))" Variant="Variant.Text">
+                                <ChildContent>
+                                    <RadzenText Text="@goal.Name"></RadzenText>
+                                </ChildContent>
+                            </RadzenButton>
+                            <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" AlignItems="AlignItems.End">
+                                <RadzenButton Variant="Variant.Text" Icon="edit" Click="(()=>AddNewGoal(goal.Id))"></RadzenButton>
+                                <RadzenButton Variant="Variant.Text" Icon="delete" Click="(()=>DeleteGoal(goal.Id))"></RadzenButton>
+                            </RadzenStack>
+
+                        </RadzenStack>
+                        <RadzenText TextStyle="TextStyle.Overline" Text="@string.Format("{0:dd/MM/yyyy}",goal.CreatedDate)"></RadzenText>
+                        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
+                            <RadzenText Text="Tarea completadas" TextStyle="TextStyle.Overline"></RadzenText>
+                            <RadzenText TextStyle="TextStyle.Overline">
+                                @string.Format("{0} / {1}", goal.Tasks.Where(d => d.Status == "Completed").Count().ToString(), goal.Tasks.Count().ToString())
+                            </RadzenText>
+                        </RadzenStack>
+
+                        @* <RadzenProgressBar ProgressBarStyle="ProgressBarStyle.Secondary" ShowValue="false" Min="0" Max="goal.Tasks.Count()" Mode="ProgressBarMode.Determinate" Value="GetValue(goal)"></RadzenProgressBar> *@
+
+                    </RadzenStack>
+
+                }
+            </RadzenCard>
+
+        </RadzenStack>
+    </RadzenColumn>
+    <RadzenColumn Size="9">
+        <PlanCompensascionComponent tasks="Tasks" GoalId="SelectedGoal"></PlanCompensascionComponent>
+    </RadzenColumn>
+</RadzenRow>
+
+
+
+@code {
+    List<Goal> goals = new List<Goal>();
+    List<Models.Task> Tasks = new List<Models.Task>();
+    private Guid SelectedGoal = Guid.Empty;
+
+    private double GetValue(Goal goal)
+    {
+        if(goal != null)
+            return goal.Tasks.Where(d => d.Status == "Completed").Count();
+
+        return 0;
+    }
+
+    private async System.Threading.Tasks.Task GetTaskByGoalId(Guid GoalId)
+    {
+        try
+        {
+            Console.WriteLine("ListadoGoal", GoalId);
+
+            SelectedGoal = GoalId;
+
+            SpinnerService.Show();
+            Tasks = await TaskService.GetAllTask(GoalId);
+        }
+        catch (Exception ex)
+        {
+            SpinnerService.Hide();
+            NotificacionService.Notify(NotificationSeverity.Error, ex.Message, "Error");
+
+        }
+        finally
+        {
+            SpinnerService.Hide();
+        }
+    }
+
+    private async System.Threading.Tasks.Task AddNewGoal(Guid? Id)
+    {
+        try
+        {
+            var modal = await DialogService.OpenAsync<AddGoalComponent>("Meta", new Dictionary<string, object>()
+            {
+                {
+                    "GoalId",Id
+                }
+            });
+            if (modal == true)
+            {
+                goals.Clear();
+                goals = await GoalService.GetAll();
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificacionService.Notify(NotificationSeverity.Error, ex.Message, "Error");
+
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+
+    }
+
+    private async System.Threading.Tasks.Task DeleteGoal(Guid Id)
+    {
+        try
+        {
+            var confirm = await DialogService.Confirm("¿Está seguro de eliminar la meta?", "Eliminar");
+
+            if (confirm.HasValue)
+                if (confirm.Value == false) return;
+
+            SpinnerService.Show();
+            await GoalService.DeleteGoal(Id);
+
+            var goal = goals.Where(d => d.Id == Id).FirstOrDefault()!;
+            goals.Remove(goal);
+        }
+        catch (Exception ex)
+        {
+            SpinnerService.Show();
+            NotificacionService.Notify(NotificationSeverity.Error, ex.Message, "Error");
+
+        }
+        finally
+        {
+            SpinnerService.Hide();
+            StateHasChanged();
+        }
+    }
+
+    protected override async System.Threading.Tasks.Task OnInitializedAsync()
+    {
+        try
+        {
+            SpinnerService.Show();
+            goals = await GoalService.GetAll();
+        }
+        catch (Exception ex)
+        {
+            SpinnerService.Hide();
+            NotificacionService.Notify(NotificationSeverity.Error, ex.Message, "Error");
+        }
+        finally
+        {
+            SpinnerService.Hide();
+        }
+    }
+}

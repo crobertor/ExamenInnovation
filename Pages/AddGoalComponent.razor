@@ -1,0 +1,74 @@
+﻿@page "/AddGoalComponent/{GoalId}"
+
+@inject DialogService DialogService;
+@inject NotificationService NotificationService;
+@inject IGloalService GoalService;
+
+<RadzenTemplateForm TItem="Goal" Data="model" Submit="Submit">
+    <RadzenStack Orientation="Orientation.Vertical">
+        <RadzenFormField Text="Nombre" AllowFloatingLabel="true">
+            <ChildContent>
+                <RadzenTextBox Name="name" @bind-Value=model.Name></RadzenTextBox>
+            </ChildContent>
+            <Helper>
+                <RadzenRequiredValidator Component="name" Text="Campo requerido"></RadzenRequiredValidator>
+            </Helper>
+        </RadzenFormField>
+    </RadzenStack>
+    <RadzenStack Style="margin-top:1em;" Orientation="Orientation.Horizontal">
+        <RadzenButton Icon="save" Text="Guardar" ButtonType="ButtonType.Submit"></RadzenButton>
+        <RadzenButton Click="CloseModal" ButtonStyle="ButtonStyle.Light" Icon="cancel" Text="Cancelar"></RadzenButton>
+    </RadzenStack>
+</RadzenTemplateForm>
+
+@code {
+
+    [Parameter] public Guid? GoalId { get; set; }
+
+    private Goal model = new Goal();
+
+    public void CloseModal()
+    {
+        DialogService.Close();
+    }
+
+    protected override async System.Threading.Tasks.Task OnInitializedAsync()
+    {
+        try
+        {
+            if (GoalId.HasValue)
+            {
+                model = await GoalService.GetById(GoalId.Value);
+            }
+        }
+        catch(Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, ex.Message, "Error");
+        }
+    }
+
+
+    public async System.Threading.Tasks.Task Submit()
+    {
+        try
+        {
+            if (GoalId.HasValue)
+            {
+
+                await GoalService.UpdateGoal(model);
+            }
+            else
+            {
+               
+                await GoalService.AddGoal(model);
+
+            }            
+
+            DialogService.Close(true);
+        }
+        catch(Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, ex.Message, "Error");
+        }
+    }
+}
